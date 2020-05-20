@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if [ ! -f vars ]; then
+	echo 'vars file not found'
+	echo '== vars =='
+	echo 'project=xxx'
+	echo 'p2_user=xxx'
+	echo 'p2_pass=xxx'
+	echo 'p2_host=xxx'
+	exit 0
+fi
+
+source vars
+
+build() {
+	docker build \
+		-t eu.gcr.io/$project/equinox:4.13 \
+		-f dockerfiles/equinox.Dockerfile .
+
+	docker build \
+                -t eu.gcr.io/$project/geodb-equinox:4.13 \
+		--build-arg from=eu.gcr.io/$project/equinox:4.13 \
+		--build-arg p2_user=$p2_user \
+		--build-arg p2_pass=$p2_pass \
+		--build-arg p2_host=$p2_host \
+		-f dockerfiles/geodb-equinox.Dockerfile .
+
+	docker tag eu.gcr.io/$project/geodb-equinox:4.13 eu.gcr.io/$project/geodb-equinox:latest
+}
+
+push() {
+	docker push eu.gcr.io/$project/equinox
+	docker push eu.gcr.io/$project/geodb-equinox
+}
+
+clean() {
+	docker rmi eu.gcr.io/$project/geodb-equinox:latest
+	docker rmi eu.gcr.io/$project/geodb-equinox:4.13
+	docker rmi eu.gcr.io/$project/equinox:4.13
+}
+
+auto() {
+	build
+	push
+	clean
+}
+
+"$@"
